@@ -50,36 +50,55 @@ selection
   .attr()        ← animation END state
 ```
 
-# Level 1 — Selections and attributes
-
-D3 selections work almost like jQuery. You select elements, then set their attributes.
-
-````
-
-// select one element
-d3.select("#chart")
-
-// select all matching elements
-d3.selectAll("rect")
-
-// chain attribute/style setters
-d3.select("#chart")
-.style("background", "red")
-.attr("width", 500)
+## Forces you can apply:
 
 ```
-
-The key difference from jQuery: setters can take a function that receives the bound data:
-
+- charge     → nodes repel (or attract) each other  (the "magnet" effect)
+- link       → edges pull connected nodes together   (the "spring" effect)
+- collide    → nodes can't overlap                   (the "collision" effect)
+- center     → pulls everything toward the center    (stops it flying off screen)
+- gravity    → pulls toward a point (custom)
 ```
 
-d3.selectAll("rect")
-.attr("height", (d) => d) // d = the data value bound to this element
-.attr("y", (d) => 100 - d) // every element gets its own value
-.style("fill", (d) => d > 50 ? "red" : "blue")
+## The data shape
+
+Force graphs need two arrays - nodes and links
 
 ```
+const nodes = [
+  { id: 1, name: "Alice" },
+  { id: 2, name: "Bob" },
+  { id: 3, name: "Carol" },
+];
 
-d is always the datum for that specific element. This is the whole point of D3, the data drives every attribute.
+const links = [
+  { source: 1, target: 2 },  // Alice — Bob
+  { source: 2, target: 3 },  // Bob  — Carol
+];
 ```
-````
+
+After the simulation runs, D3 mutates your node objects and adds x and y coordinates to them:
+
+```
+// after simulation starts, your nodes look like this:
+{ id: 1, name: "Alice", x: 243, y: 187, vx: 0.2, vy: -0.1 }
+//                       ↑ D3 added these
+```
+
+That's how you know where to draw each node — you read node.x and node.y on every tick.
+
+### The tick concept
+
+The simulation doesn't run all at once. It runs in small steps called ticks. On every tick, positions update slightly. You listen to the tick event and redraw your elements:
+
+```
+simulation.on("tick", () => {
+  // runs ~300 times as simulation cools down
+  // update element positions here based on new node.x, node.y values
+  circles.attr("cx", d => d.x).attr("cy", d => d.y);
+  lines.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+       .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+});
+```
+
+This is what makes it feel alive — you're watching the physics settle in real time.
