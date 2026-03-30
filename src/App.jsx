@@ -5,72 +5,101 @@ const App = () => {
   const svgRef = useRef(null);
 
   useEffect(() => {
-    const data = [40, 80, 25, 60, 90, 35, 70];
+    d3.select(svgRef.current).selectAll("*").remove();
 
-    // dimensions
+    const data = [
+      { month: "Jan", value: 30 },
+      { month: "Feb", value: 55 },
+      { month: "Mar", value: 40 },
+      { month: "Apr", value: 70 },
+      { month: "May", value: 45 },
+      { month: "Jun", value: 85 },
+      { month: "Jul", value: 60 },
+      { month: "Aug", value: 90 },
+    ];
+
     const width = 600;
     const height = 400;
     const margin = { top: 20, right: 20, bottom: 40, left: 50 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
-    const svg = d3.select(svgRef.current)
-
-    // a <g> (group) shifted by margin, everything draws inside this
+    const svg = d3.select(svgRef.current);
     const g = svg
       .append("g")
       .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
-    // xScale — maps index to horizontal position
     const xScale = d3
-      .scaleBand()
-      .domain(data.map((_, i) => i))
-      .range([0, innerWidth])
-      .padding(0.2);
+      .scalePoint()
+      .domain(data.map((d) => d.month))
+      .range([0, innerWidth]);
 
-    // yScale — maps data value to vertical position
-    const yScale = d3.scaleLinear().domain([0, 100]).range([innerHeight, 0]); // flipped! high value = small y = high on screen
+    const yScale = d3.scaleLinear().domain([0, 100]).range([innerHeight, 0]);
 
-    // x axis
+    // axes
     g.append("g")
-    .attr("transform", `translate(0, ${innerHeight})`)
-    .call(d3.axisBottom(xScale))
-    .selectAll("text")
-    .attr("fill", "white");
-    
-    // y axis
+      .attr("transform", `translate(0, ${innerHeight})`)
+      .call(d3.axisBottom(xScale))
+      .selectAll("text")
+      .attr("fill", "white");
+
     g.append("g")
       .call(d3.axisLeft(yScale))
       .selectAll("text")
       .attr("fill", "white");
 
-    // bars
-    g.selectAll("rect")
-      .data(data)
-      .join("rect")
-      .attr("x", (d, i) => xScale(i))
-      .attr("width", xScale.bandwidth())
+    // area — drawn first (bottom layer)
+    const area = d3
+      .area()
+      .x((d) => xScale(d.month))
+      .y0(innerHeight)
+      .y1((d) => yScale(d.value));
+
+    g.append("path")
+      .datum(data)
+      .attr("d", area)
       .attr("fill", "steelblue")
-      .attr("rx", 3)
-      // Add interactivity
+      .attr("opacity", 0.15);
+
+    // line generator
+    const line = d3
+      .line()
+      .x((d) => xScale(d.month))
+      .y((d) => yScale(d.value));
+
+    // line path — animated
+    const path = g
+      .append("path")
+      .datum(data)
+      .attr("d", line)
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-width", 2);
+
+    const totalLength = path.node().getTotalLength();
+
+    path
+      .attr("stroke-dasharray", totalLength)
+      .attr("stroke-dashoffset", totalLength)
+      .transition()
+      .duration(1500)
+      .ease(d3.easeLinear)
+      .attr("stroke-dashoffset", 0);
+
+    // dots — drawn last (top layer)
+    g.selectAll("circle")
+      .data(data)
+      .join("circle")
+      .attr("cx", (d) => xScale(d.month))
+      .attr("cy", (d) => yScale(d.value))
+      .attr("r", 4)
+      .attr("fill", "steelblue")
       .on("mouseover", function (event, d) {
-        d3.select(this).attr("fill", "orange");
+        d3.select(this).attr("r", 7).attr("fill", "orange");
       })
       .on("mouseout", function () {
-        d3.select(this).attr("fill", "steelblue");
-      })
-      .on("click", function (event, d) {
-        console.log("clicked bar with value:", d);
-      })
-      // start bars at height 0 (before animation)
-      .attr("y", innerHeight)
-      .attr("height", 0)
-      // then animate to real values
-      .transition()
-      .duration(800)
-      .ease(d3.easeCubicOut)
-      .attr("y", (d) => yScale(d))
-      .attr("height", (d) => innerHeight - yScale(d));
+        d3.select(this).attr("r", 4).attr("fill", "steelblue");
+      });
   }, []);
 
   return (
