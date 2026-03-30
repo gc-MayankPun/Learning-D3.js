@@ -22,13 +22,11 @@ const App = () => {
 
     const links = [
       { source: 0, target: 1 },
-      { source: 0, target: 2 },
-      { source: 0, target: 3 },
+      { source: 0, target: 2 }, 
       { source: 0, target: 3 },
       { source: 0, target: 4 },
       { source: 0, target: 5 },
-      { source: 0, target: 6 },
-      { source: 0, target: 6 },
+      { source: 1, target: 6 },
     ];
 
     // count connections per node — more connections = bigger node
